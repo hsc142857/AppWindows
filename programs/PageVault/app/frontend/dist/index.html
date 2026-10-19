@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PageVault</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>PageVault</h1>
+    <nav>
+      <button data-tab="overview" class="active">개요</button>
+      <button data-tab="targets">대상 URL</button>
+      <button data-tab="snapshots">스냅샷</button>
+      <button data-tab="settings">설정</button>
+    </nav>
+  </header>
+
+  <div id="toast" hidden></div>
+
+  <main>
+    <section id="tab-overview" class="tab active">
+      <div class="cards">
+        <div class="card"><span>대상</span><strong id="ov-targets">-</strong></div>
+        <div class="card"><span>스냅샷</span><strong id="ov-snapshots">-</strong></div>
+        <div class="card"><span>미동기화</span><strong id="ov-unsynced">-</strong></div>
+        <div class="card"><span>마지막 수집</span><strong id="ov-last">-</strong></div>
+      </div>
+      <div id="ov-login" class="alert" hidden></div>
+      <dl class="info">
+        <dt>수집 주기</dt><dd id="ov-interval">-</dd>
+        <dt>Postgres</dt><dd id="ov-pg">-</dd>
+        <dt>Chrome 호스트</dt><dd id="ov-host">-</dd>
+        <dt>데이터 위치</dt><dd id="ov-home">-</dd>
+      </dl>
+      <div class="actions">
+        <button id="ov-sync" class="primary">지금 동기화</button>
+        <button id="ov-refresh">새로고침</button>
+      </div>
+      <details class="help">
+        <summary>처음 설정 방법</summary>
+        <ol>
+          <li><b>설정</b> 탭에서 <b>Chrome 호스트 등록</b>을 누릅니다.</li>
+          <li>Chrome에서 <code>chrome://extensions</code> → 개발자 모드 → <b>압축해제된 확장 프로그램 로드</b>로 <code>extension</code> 폴더를 선택합니다.</li>
+          <li><b>대상 URL</b> 탭에 수집할 페이지를 추가하고, Chrome에서 해당 사이트에 로그인해 둡니다.</li>
+          <li>확장 팝업의 <b>지금 수집</b>으로 바로 확인할 수 있습니다.</li>
+        </ol>
+      </details>
+    </section>
+
+    <section id="tab-targets" class="tab">
+      <form id="add-form" class="row">
+        <input id="add-url" type="url" placeholder="https://… 수집할 페이지 URL" required>
+        <input id="add-name" type="text" placeholder="이름 (선택)">
+        <button class="primary">추가</button>
+      </form>
+      <table>
+        <thead><tr><th>ID</th><th>사용</th><th>이름</th><th>URL</th><th>마지막 상태</th><th>마지막 확인</th><th></th></tr></thead>
+        <tbody id="targets-body"></tbody>
+      </table>
+    </section>
+
+    <section id="tab-snapshots" class="tab">
+      <div class="row">
+        <select id="snap-filter"><option value="">전체 대상</option></select>
+        <select id="snap-limit"><option>50</option><option>100</option><option>300</option></select>
+        <button id="snap-refresh">새로고침</button>
+      </div>
+      <div class="split">
+        <table class="snap-list">
+          <thead><tr><th>ID</th><th>상태</th><th>제목</th><th>수집</th><th>마지막 확인</th><th>동기화</th></tr></thead>
+          <tbody id="snap-body"></tbody>
+        </table>
+        <article id="snap-detail" class="detail"><p class="muted">스냅샷을 선택하세요.</p></article>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab">
+      <h2>수집</h2>
+      <form id="settings-form" class="grid">
+        <label>수집 주기 (초, 최소 30)<input id="set-interval" type="number" min="30" step="1" required></label>
+        <label>로딩 후 대기 (초, 0~120)<input id="set-delay" type="number" min="0" max="120" step="1" required></label>
+        <div><button class="primary">저장</button></div>
+      </form>
+      <p class="muted">주기를 바꾸면 Chrome 확장은 다음 라운드부터 적용합니다.</p>
+
+      <h2>Postgres 동기화</h2>
+      <form id="pg-form" class="grid">
+        <label class="wide">접속 URL<input id="pg-url" type="text" placeholder="postgres://user:pass@host:5432/db?sslmode=prefer" autocomplete="off" spellcheck="false"></label>
+        <label>테이블 이름<input id="pg-table" type="text" placeholder="pagevault_snapshots" spellcheck="false"></label>
+        <div class="actions">
+          <button type="submit" class="primary">저장</button>
+          <button type="button" id="pg-test">접속 테스트</button>
+          <button type="button" id="pg-clear" class="danger">설정 삭제</button>
+        </div>
+      </form>
+      <p class="muted">비밀번호는 Windows DPAPI로 암호화해 저장합니다. 표시된 <code>****</code>는 저장된 비밀번호를 그대로 씁니다.</p>
+
+      <h2>Chrome 호스트</h2>
+      <p id="host-detail" class="muted"></p>
+      <div class="actions"><button id="host-install">Chrome 호스트 등록</button></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

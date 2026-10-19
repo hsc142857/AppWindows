@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "PageVault",
+  "version": "0.1.0",
+  "description": "로그인된 페이지를 주기적으로 읽어 PageVault(로컬 SQLite)에 백업합니다.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArFBT3UAsjv+1VC6J9YBgVrnNCVzvWWi5LQo8Heao/XAVttulmso0TK+wBeWnZ7uVny914WA20KExXDS3CXOjBlz0WlsVFM5ExVImRh0JfCYY4y882ZXl96NbGuZmP9QP9vJ1YIngOupndSfuUod8+kNsHEGY3SPBDeRoH6han/adfCDNPrTvtdVAIJeaRFNerTjSjoc4ZXf7v1Vai4cSrbpZ4VoYTqmZoU9f0DzgMBvwxaFonQl3j56UHZzTMrBzKF5kzSjYMzw078RcskhZ65kX1rzChwWfXWHF04x28s7I7s5ajNraAGwl/E/U2EjGDy2LH3ii6Vq/5geVww9yJQIDAQAB",
+  "minimum_chrome_version": "120",
+  "permissions": ["alarms", "tabs", "scripting", "nativeMessaging", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_title": "PageVault",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  },
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}

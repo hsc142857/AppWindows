@@ -1,0 +1,34 @@
+PageVault 사용법
+================
+
+로그인된 Chrome에서 지정한 웹페이지를 주기적으로 읽어 이 PC(SQLite)에 백업하고,
+설정하면 원격 PostgreSQL로 동기화합니다.
+
+1. 설치
+   - 이 폴더를 원하는 위치에 둡니다 (예: C:\Tools\PageVault).
+   - PageVault.exe를 실행하면 작업 표시줄 알림 영역(트레이)에 아이콘이 생깁니다.
+   - 트레이 아이콘을 클릭해 관리 창을 열고, [설정] 탭에서 [Chrome 호스트 등록]을 누릅니다.
+     (명령 프롬프트에서 pagevault.exe install-host 를 실행해도 같습니다.)
+
+2. Chrome 확장 설치 (처음 한 번)
+   - Chrome 주소창에 chrome://extensions 입력
+   - 오른쪽 위 [개발자 모드] 켜기
+   - [압축해제된 확장 프로그램을 로드합니다] → 이 폴더의 extension 폴더 선택
+   - 확장 ID가 aojpddnbebpeglnlidlnhdkgpchgfdpe 인지 확인
+
+3. 수집 대상 추가
+   - 관리 창 [대상 URL] 탭에서 페이지 URL을 추가합니다.
+   - Chrome에서 해당 사이트에 로그인해 둡니다.
+   - Chrome 툴바의 PageVault 확장 아이콘 → [지금 수집]으로 바로 확인할 수 있습니다.
+
+4. 수집 주기 / Postgres
+   - [설정] 탭에서 수집 주기(최소 30초)와 로딩 후 대기 시간을 정합니다.
+   - Postgres 접속 URL 예: postgres://user:pass@host:5432/db?sslmode=require
+     테이블은 자동으로 만들어집니다. 비밀번호는 Windows DPAPI로 암호화해 저장합니다.
+
+알아 둘 점
+   - 수집은 Chrome이 켜져 있는 동안에만 됩니다 (트레이 앱이 꺼져 있어도 수집됨).
+   - 로그인이 만료되면 트레이 알림이 뜹니다. Chrome에서 다시 로그인하세요.
+   - 주기를 바꾸면 다음 라운드부터 적용됩니다.
+   - 데이터 위치: %LOCALAPPDATA%\PageVault (pagevault.sqlite, postgres.json, host.log)
+   - 제거: pagevault.exe uninstall-host 실행 후 폴더 삭제
