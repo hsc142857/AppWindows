@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>ActivityLogKeeper</title>
+  <style>
+    body { font: 13px/1.5 "Segoe UI", "Malgun Gothic", system-ui, sans-serif; width: 300px; margin: 0; padding: 12px; color: #1f2328; }
+    h1 { font-size: 15px; margin: 0 0 8px; }
+    button { width: 100%; padding: 8px; font: inherit; font-weight: 600; border: 0; border-radius: 6px; background: #1f6feb; color: #fff; cursor: pointer; }
+    button:disabled { background: #8c959f; cursor: default; }
+    .host { font-size: 12px; margin-bottom: 8px; }
+    .ok { color: #1a7f37; } .bad { color: #cf222e; }
+    dl { margin: 10px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+    dt { color: #656d76; } dd { margin: 0; word-break: break-all; }
+    ul { margin: 4px 0 0; padding-left: 18px; }
+  </style>
+</head>
+<body>
+  <h1>ActivityLogKeeper</h1>
+  <div class="host" id="host">호스트 확인 중…</div>
+  <button id="collect">지금 수집</button>
+  <div id="result"></div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ActivityLogKeeper</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>ActivityLogKeeper</h1>
+    <nav>
+      <button data-tab="overview" class="active">개요</button>
+      <button data-tab="targets">대상</button>
+      <button data-tab="entries">로그</button>
+      <button data-tab="captures">수집 기록</button>
+      <button data-tab="settings">설정</button>
+    </nav>
+  </header>
+
+  <div id="toast" hidden></div>
+
+  <main>
+    <section id="tab-overview" class="tab active">
+      <div class="cards">
+        <div class="card"><span>대상 (사용 / 전체)</span><strong id="ov-targets">-</strong></div>
+        <div class="card"><span>로그 행</span><strong id="ov-entries">-</strong></div>
+        <div class="card"><span>미전송</span><strong id="ov-unsynced">-</strong></div>
+        <div class="card"><span>마지막 수집</span><strong id="ov-last">-</strong></div>
+      </div>
+      <div id="ov-attention" class="alert" hidden></div>
+      <div id="ov-rejected" class="alert" hidden>
+        <span id="ov-rejected-text"></span>
+        <button id="ov-retry" class="small">다시 보내기</button>
+      </div>
+      <dl class="info">
+        <dt>수집 주기</dt><dd id="ov-interval">-</dd>
+        <dt>Web API</dt><dd id="ov-api">-</dd>
+        <dt>Chrome 호스트</dt><dd id="ov-host">-</dd>
+        <dt>데이터 위치</dt><dd id="ov-home">-</dd>
+        <dt>버전</dt><dd id="ov-version">-</dd>
+      </dl>
+      <div class="actions">
+        <button id="ov-sync" class="primary">지금 동기화</button>
+        <button id="ov-refresh">새로고침</button>
+      </div>
+      <details class="help">
+        <summary>처음 설정 방법</summary>
+        <ol>
+          <li><b>설정</b> 탭에서 <b>Chrome 호스트 등록</b>을 누릅니다.</li>
+          <li>Chrome에서 <code>chrome://extensions</code> → 개발자 모드 → <b>압축해제된 확장 프로그램 로드</b>로 <code>extension</code> 폴더를 선택합니다.</li>
+          <li><b>대상</b> 탭에 활동 로그가 보이는 페이지를 추가하고, Chrome에서 해당 사이트에 로그인해 둡니다.</li>
+          <li>확장 팝업의 <b>지금 수집</b>으로 바로 확인할 수 있습니다. 표를 잘못 고르면 대상의 <b>수정</b>에서 CSS 선택자를 지정합니다.</li>
+        </ol>
+      </details>
+    </section>
+
+    <section id="tab-targets" class="tab">
+      <form id="add-form" class="row">
+        <input id="add-url" type="url" placeholder="https://… 활동 로그가 보이는 페이지 URL" required>
+        <input id="add-name" type="text" placeholder="이름 (선택)">
+        <input id="add-selector" class="selector" type="text" placeholder="CSS 선택자 (비우면 자동)" spellcheck="false">
+        <button class="primary">추가</button>
+      </form>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>사용</th><th>이름</th><th>URL</th><th>선택자</th><th>로그 행</th><th>마지막 상태</th><th>마지막 수집</th><th></th></tr></thead>
+          <tbody id="targets-body"></tbody>
+        </table>
+      </div>
+      <p class="muted">선택자를 비우면 페이지에서 행이 가장 많은 표를 읽습니다. 대상을 지워도 이미 모은 로그와 수집 기록은 남습니다.</p>
+    </section>
+
+    <section id="tab-entries" class="tab">
+      <div class="row">
+        <select id="ent-filter"><option value="">전체 대상</option></select>
+        <label>처음 확인 <input id="ent-from" type="date"></label>
+        <label>~ <input id="ent-to" type="date"></label>
+        <select id="ent-limit"><option>100</option><option selected>300</option><option>1000</option></select>
+        <button id="ent-refresh">조회</button>
+        <span class="grow"></span>
+        <button id="ent-export" class="primary">CSV 내보내기</button>
+      </div>
+      <p class="count" id="ent-count"></p>
+      <div class="table-wrap">
+        <table>
+          <thead id="ent-head"></thead>
+          <tbody id="ent-body"></tbody>
+        </table>
+      </div>
+      <p class="muted">화면에는 최근 행부터 개수만큼 보여 줍니다. CSV 내보내기는 같은 조건의 행 전체를 오래된 순서로 저장합니다 (Excel에서 바로 열림).</p>
+    </section>
+
+    <section id="tab-captures" class="tab">
+      <div class="row">
+        <select id="cap-filter"><option value="">전체 대상</option></select>
+        <select id="cap-limit"><option>50</option><option selected>100</option><option>300</option></select>
+        <button id="cap-refresh">새로고침</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>수집 시각</th><th>대상</th><th>상태</th><th>행</th><th>새 행</th><th>제목 / 오류</th></tr></thead>
+          <tbody id="cap-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab">
+      <h2>수집</h2>
+      <form id="settings-form" class="grid">
+        <label>수집 주기 (초, 최소 30)<input id="set-interval" type="number" min="30" step="1" required></label>
+        <label>로딩 후 대기 (초, 0~120)<input id="set-delay" type="number" min="0" max="120" step="1" required></label>
+        <div><button class="primary">저장</button></div>
+      </form>
+      <p class="muted">주기를 바꾸면 Chrome 확장은 다음 라운드부터 적용합니다.</p>
+
+      <h2>Web API 업로드</h2>
+      <form id="api-form" class="grid">
+        <label class="wide">API 주소<input id="api-url" type="text" placeholder="https://api.example.com" autocomplete="off" spellcheck="false"></label>
+        <label class="wide">API 토큰<input id="api-token" type="password" placeholder="Bearer 토큰" autocomplete="off" spellcheck="false"></label>
+        <div class="actions">
+          <button type="submit" class="primary">저장</button>
+          <button type="button" id="api-test">접속 테스트</button>
+          <button type="button" id="api-clear" class="danger">설정 삭제</button>
+        </div>
+      </form>
+      <p class="muted">토큰은 Windows DPAPI로 암호화해 저장합니다. 주소만 바꿀 때는 토큰 칸을 비워 두면 저장된 토큰을 그대로 씁니다.</p>
+
+      <h2>Chrome 호스트</h2>
+      <p id="host-detail" class="muted"></p>
+      <div class="actions"><button id="host-install">Chrome 호스트 등록</button></div>
+    </section>
+  </main>
+
+  <dialog id="edit-dialog">
+    <form id="edit-form" method="dialog">
+      <h3 id="edit-title">대상 수정</h3>
+      <div class="grid">
+        <label>URL<input id="edit-url" type="text" disabled></label>
+        <label>이름<input id="edit-name" type="text"></label>
+        <label>CSS 선택자 (비우면 자동: 행이 가장 많은 표)<input id="edit-selector" type="text" spellcheck="false"></label>
+      </div>
+      <div class="actions">
+        <button type="button" id="edit-cancel">취소</button>
+        <button type="submit" class="primary">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

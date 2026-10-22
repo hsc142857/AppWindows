@@ -1,3 +1,8 @@
 go 1.27.2
 
-use ./programs/PageVault
+use (
+	./programs/ActivityLogKeeper
+	./programs/NaverBookingScraper
+	./programs/PageVault
+	./shared
+)

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><title>활동 로그 (테스트)</title></head>
+<body>
+  <!-- 레이아웃용 작은 표: 자동 선택에서 뽑히면 안 된다 -->
+  <table id="layout"><tr><td>메뉴</td><td>본문</td></tr></table>
+
+  <table id="log">
+    <thead><tr><th>일시</th><th>작업</th><th>사용자</th></tr></thead>
+    <tbody>
+      <tr><td>2026-10-19 09:12</td><td>결제   승인</td><td>lee</td></tr>
+      <tr><td>2026-10-19 09:05</td><td>주문 취소</td><td>kim</td></tr>
+      <tr><td>2026-10-19 09:00</td><td>로그인</td><td>kim</td></tr>
+      <tr><td></td><td> </td><td></td></tr>
+    </tbody>
+  </table>
+
+  <div role="grid" id="grid">
+    <div role="row"><span role="columnheader">시각</span><span role="columnheader">내용</span></div>
+    <div role="row"><span role="gridcell">10:00</span><span role="gridcell">설정 변경</span></div>
+  </div>
+
+  <ul id="list">
+    <li><span>11:00</span><span>파일 다운로드</span></li>
+    <li><span>11:05</span><span>로그아웃</span></li>
+  </ul>
+</body>
+</html>

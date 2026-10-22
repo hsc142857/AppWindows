@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "ActivityLogKeeper",
+  "version": "0.1.0",
+  "description": "웹 프로그램의 활동 로그(이력 표)를 주기적으로 읽어 PC(로컬 SQLite)에 보관합니다.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6SIV0Ja325eosCfkr5Ljyxz4ZMCr8NUnXthP+wGznAAG+SRTqOPFqqzKlp0wohMAQMFqjZdHShnSGZ3JnX+rtT1JFqiCNT1I9gt/vLKLjyuLGWJ7YIH27hN1IX4fqL6qMZEb7VYZqULArrNNwmohJ2wL6j8GYflKGSQywj36VEkPDBZ9BTXop9IAJFwz12aHnd6taZ1lurzPJiYYpQNG4VjSCCmlOD2e3MyWIsoQ53R0IarfV174q060rsOkiB1+Al1S1NFniGBf6WUMiVCGTe/iKIG57XSyTQ/gjnHfsBHlwpTseBh5TsAhobOpWzF/2bNQDJmzJ3wEOFPetc1wQIDAQAB",
+  "minimum_chrome_version": "120",
+  "permissions": ["alarms", "tabs", "scripting", "nativeMessaging", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_title": "ActivityLogKeeper",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  },
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}
