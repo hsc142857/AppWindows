@@ -75,8 +75,15 @@ func InstallHost(srcExe string, extensionIDs []string) (InstallResult, error) {
 	return InstallResult{ExePath: dst, ManifestPath: manifestPath, Registered: registered}, nil
 }
 
-// HostExeName은 호스트(CLI) 실행 파일 이름이다.
-func HostExeName() string { return hostExeName() }
+// CLIExeName은 배포 폴더에 들어 있는 CLI(호스트) 실행 파일 이름이다.
+// GUI(PageVault.exe)와 대소문자만 다르면 Windows에서 같은 파일로 취급되므로 -cli를 붙인다.
+// Chrome 호스트로 설치하면 bin\pagevault.exe로 복사된다 (별도 폴더라 충돌 없음).
+func CLIExeName() string {
+	if runtime.GOOS == "windows" {
+		return "pagevault-cli.exe"
+	}
+	return "pagevault-cli"
+}
 
 // HostInstalled는 매니페스트·실행 파일이 고정 위치에 있고 Chrome에 등록되어 있는지 확인한다.
 func HostInstalled() (bool, string) {

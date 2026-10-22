@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -12,26 +13,28 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"golang.org/x/term"
+
 	"pagevault/core"
 )
 
 const usage = `PageVault — 로그인된 Chrome 페이지를 주기적으로 백업합니다.
 
 사용법:
-  pagevault status
-  pagevault target list
-  pagevault target add <url> [이름]
-  pagevault target remove|enable|disable <id>
-  pagevault interval [초]          수집 주기 (최소 30초)
-  pagevault delay [초]             로딩 후 대기 (0~120초)
-  pagevault snapshots [개수] [--url <url>]
-  pagevault show <id> [--html]
-  pagevault pg set <postgres://user:pass@host:5432/db?sslmode=prefer> [--table 이름]
-  pagevault pg show|test|clear
-  pagevault sync
-  pagevault install-host [확장ID...]
-  pagevault uninstall-host
-  pagevault native-host            (Chrome이 실행하는 모드)
+  pagevault-cli status
+  pagevault-cli target list
+  pagevault-cli target add <url> [이름]
+  pagevault-cli target remove|enable|disable <id>
+  pagevault-cli interval [초]          수집 주기 (최소 30초)
+  pagevault-cli delay [초]             로딩 후 대기 (0~120초)
+  pagevault-cli snapshots [개수] [--url <url>]
+  pagevault-cli show <id> [--html]
+  pagevault-cli api set <https://api.example.com> [토큰]   (토큰 생략 시 입력받음)
+  pagevault-cli api show|test|clear
+  pagevault-cli sync [--retry-rejected]
+  pagevault-cli install-host [확장ID...]
+  pagevault-cli uninstall-host
+  pagevault-cli native-host            (Chrome이 실행하는 모드)
 
 데이터 위치: %s
 `
@@ -89,8 +92,8 @@ func run(args []string) error {
 			fmt.Println("등록된 호스트가 없습니다.")
 		}
 		return err
-	case "pg":
-		return pgCmd(rest)
+	case "api":
+		return apiCmd(rest)
 	}
 
 	st, err := core.OpenStore()
@@ -113,17 +116,26 @@ func run(args []string) error {
 	case "show":
 		return show(st, rest)
 	case "sync":
+		if len(rest) > 0 && rest[0] == "--retry-rejected" {
+			n, err := st.ClearRejected()
+			if err != nil {
+				return err
+			}
+			fmt.Printf("거부된 %d개를 다시 보냅니다.\n", n)
+		} else if len(rest) > 0 {
+			return errors.New("사용법: pagevault-cli sync [--retry-rejected]")
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 		res, err := core.SyncConfigured(ctx, st)
-		if !res.PostgresConfigured && err == nil {
-			fmt.Printf("Postgres가 설정되지 않았습니다 (미동기화 %d개). pagevault pg set 으로 설정하세요.\n", res.Remaining)
+		if !res.APIConfigured && err == nil {
+			fmt.Printf("Web API가 설정되지 않았습니다 (미동기화 %d개). pagevault-cli api set 으로 설정하세요.\n", res.Remaining)
 			return nil
 		}
-		fmt.Printf("보냄 %d개, 남음 %d개\n", res.Sent, res.Remaining)
+		fmt.Printf("보냄 %d개, 거부 %d개, 남음 %d개\n", res.Sent, res.Rejected, res.Remaining)
 		return err
 	}
-	return fmt.Errorf("알 수 없는 명령: %s (pagevault help)", cmd)
+	return fmt.Errorf("알 수 없는 명령: %s (pagevault-cli help)", cmd)
 }
 
 func status(st *core.Store) error {
@@ -135,23 +147,16 @@ func status(st *core.Store) error {
 	fmt.Printf("대상: %d개 (사용 %d개)\n", s.Targets, s.EnabledCount)
 	fmt.Printf("수집 주기: %d초, 로딩 대기: %d초\n", s.Settings.IntervalSeconds, s.Settings.LoadDelaySeconds)
 	fmt.Printf("스냅샷: %d개, 미동기화: %d개\n", s.Snapshots, s.Unsynced)
+	if s.Rejected > 0 {
+		fmt.Printf("서버가 거부: %d개 (pagevault-cli snapshots 로 사유 확인, sync --retry-rejected 로 재전송)\n", s.Rejected)
+	}
 	fmt.Println("마지막 수집:", orDash(localTime(s.LastCapture)))
-	fmt.Println("Postgres:", pgSummary())
+	summary, _ := core.APISummary()
+	fmt.Println("Web API:", summary)
 	for _, t := range s.LoginRequired {
 		fmt.Printf("로그인 필요: #%d %s %s\n", t.ID, t.Name, t.URL)
 	}
 	return nil
-}
-
-func pgSummary() string {
-	c, ok, err := core.LoadPGConfig()
-	switch {
-	case err != nil:
-		return "설정 오류: " + err.Error()
-	case !ok:
-		return "설정 안 됨"
-	}
-	return c.Masked() + " (테이블 " + c.Table + ")"
 }
 
 func targetCmd(st *core.Store, args []string) error {
@@ -161,7 +166,7 @@ func targetCmd(st *core.Store, args []string) error {
 			return err
 		}
 		if len(states) == 0 {
-			fmt.Println("등록된 대상이 없습니다. pagevault target add <url> [이름]")
+			fmt.Println("등록된 대상이 없습니다. pagevault-cli target add <url> [이름]")
 			return nil
 		}
 		w := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
@@ -175,7 +180,7 @@ func targetCmd(st *core.Store, args []string) error {
 	switch args[0] {
 	case "add":
 		if len(args) < 2 {
-			return errors.New("사용법: pagevault target add <url> [이름]")
+			return errors.New("사용법: pagevault-cli target add <url> [이름]")
 		}
 		t, err := st.AddTarget(args[1], strings.Join(args[2:], " "))
 		if err != nil {
@@ -185,7 +190,7 @@ func targetCmd(st *core.Store, args []string) error {
 		return nil
 	case "remove", "enable", "disable":
 		if len(args) != 2 {
-			return fmt.Errorf("사용법: pagevault target %s <id>", args[0])
+			return fmt.Errorf("사용법: pagevault-cli target %s <id>", args[0])
 		}
 		id, err := parseID(args[1])
 		if err != nil {
@@ -255,8 +260,11 @@ func snapshots(st *core.Store, args []string) error {
 	fmt.Fprintln(w, "ID\t상태\t수집\t마지막 확인\t동기화\t제목\tURL")
 	for _, s := range list {
 		synced := "대기"
-		if s.SyncedAt != "" {
+		switch {
+		case s.SyncedAt != "":
 			synced = "완료"
+		case s.SyncError != "":
+			synced = "거부"
 		}
 		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%s\n", s.ID, s.Status, localTime(s.CapturedAt), localTime(s.LastSeenAt),
 			synced, truncate(orDash(s.Title), 40), s.TargetURL)
@@ -266,7 +274,7 @@ func snapshots(st *core.Store, args []string) error {
 
 func show(st *core.Store, args []string) error {
 	if len(args) < 1 {
-		return errors.New("사용법: pagevault show <id> [--html]")
+		return errors.New("사용법: pagevault-cli show <id> [--html]")
 	}
 	id, err := parseID(args[0])
 	if err != nil {
@@ -287,6 +295,9 @@ func show(st *core.Store, args []string) error {
 	fmt.Println("제목:", orDash(s.Title))
 	fmt.Println("수집:", localTime(s.CapturedAt), "/ 마지막 확인:", localTime(s.LastSeenAt))
 	fmt.Println("동기화:", orDash(localTime(s.SyncedAt)))
+	if s.SyncError != "" {
+		fmt.Println("서버 거부:", s.SyncError)
+	}
 	if s.Error != "" {
 		fmt.Println("오류:", s.Error)
 	}
@@ -297,57 +308,77 @@ func show(st *core.Store, args []string) error {
 	return nil
 }
 
-func pgCmd(args []string) error {
+func apiCmd(args []string) error {
 	if len(args) == 0 {
 		args = []string{"show"}
 	}
 	switch args[0] {
 	case "show":
-		fmt.Println(pgSummary())
+		summary, _ := core.APISummary()
+		fmt.Println(summary)
 		return nil
 	case "set":
-		if len(args) < 2 {
-			return errors.New("사용법: pagevault pg set <postgres://...> [--table 이름]")
+		if len(args) < 2 || len(args) > 3 {
+			return errors.New("사용법: pagevault-cli api set <https://api.example.com> [토큰]  (토큰을 생략하면 입력받습니다)")
 		}
-		table := ""
-		if len(args) >= 4 && args[2] == "--table" {
-			table = args[3]
-		} else if len(args) > 2 {
-			return errors.New("사용법: pagevault pg set <postgres://...> [--table 이름]")
+		token := ""
+		if len(args) == 3 {
+			token = args[2]
+		} else {
+			var err error
+			if token, err = readSecret("API 토큰: "); err != nil {
+				return err
+			}
 		}
-		c, err := core.NewPGConfig(args[1], table)
+		c, err := core.NewAPIConfig(args[1], token)
 		if err != nil {
 			return err
 		}
-		if err := core.SavePGConfig(c); err != nil {
+		if err := core.SaveAPIConfig(c); err != nil {
 			return err
 		}
-		fmt.Println("저장:", c.Masked(), "(테이블 "+c.Table+")")
+		fmt.Println("저장:", c.BaseURL, "(토큰 "+c.MaskedToken()+")")
 		return nil
 	case "test":
-		c, ok, err := core.LoadPGConfig()
+		c, ok, err := core.LoadAPIConfig()
 		if err != nil {
 			return err
 		}
 		if !ok {
-			return errors.New("Postgres가 설정되지 않았습니다")
+			return errors.New("Web API가 설정되지 않았습니다 (pagevault-cli api set)")
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		v, err := core.TestPG(ctx, c)
+		v, err := core.TestAPI(ctx, c)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("접속 성공: PostgreSQL %s, 테이블 %s 준비됨\n", v, c.Table)
+		fmt.Printf("접속 성공: %s (서버 버전 %s)\n", c.BaseURL, orDash(v))
 		return nil
 	case "clear":
-		if err := core.ClearPGConfig(); err != nil {
+		if err := core.ClearAPIConfig(); err != nil {
 			return err
 		}
-		fmt.Println("Postgres 설정을 지웠습니다.")
+		fmt.Println("Web API 설정을 지웠습니다.")
 		return nil
 	}
-	return fmt.Errorf("알 수 없는 pg 명령: %s", args[0])
+	return fmt.Errorf("알 수 없는 api 명령: %s", args[0])
+}
+
+// readSecret은 터미널이면 화면에 표시하지 않고, 아니면(파이프) 표준 입력 한 줄을 읽는다.
+func readSecret(prompt string) (string, error) {
+	fd := int(os.Stdin.Fd())
+	if term.IsTerminal(fd) {
+		fmt.Fprint(os.Stderr, prompt)
+		b, err := term.ReadPassword(fd)
+		fmt.Fprintln(os.Stderr)
+		return strings.TrimSpace(string(b)), err
+	}
+	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	if err != nil && line == "" {
+		return "", errors.New("토큰을 읽지 못했습니다")
+	}
+	return strings.TrimSpace(line), nil
 }
 
 func installHost(ids []string) error {

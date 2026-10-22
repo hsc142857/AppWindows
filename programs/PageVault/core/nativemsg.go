@@ -150,14 +150,15 @@ func (h *Host) handle(msg []byte) map[string]any {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 		res, err := syncFn(ctx, h.Store)
-		resp["postgresConfigured"] = res.PostgresConfigured
+		resp["apiConfigured"] = res.APIConfigured
 		resp["sent"] = res.Sent
+		resp["rejected"] = res.Rejected
 		resp["remaining"] = res.Remaining
 		if err != nil {
 			// 데이터는 SQLite에 남아 있으므로 다음 라운드에 다시 보낸다.
 			return fail(err)
 		}
-		h.logf("sync sent=%d remaining=%d", res.Sent, res.Remaining)
+		h.logf("sync sent=%d rejected=%d remaining=%d", res.Sent, res.Rejected, res.Remaining)
 	default:
 		return fail(errorf("알 수 없는 요청 type: %q", req.Type))
 	}

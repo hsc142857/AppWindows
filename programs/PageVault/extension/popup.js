@@ -27,7 +27,9 @@ function render(r) {
   if (r.sync) {
     row("동기화", r.sync.ok === false
       ? `실패: ${r.sync.error}`
-      : r.sync.postgresConfigured ? `보냄 ${r.sync.sent}, 남음 ${r.sync.remaining}` : "Postgres 미설정",
+      : r.sync.apiConfigured
+        ? `보냄 ${r.sync.sent}, 남음 ${r.sync.remaining}` + (r.sync.rejected ? `, 거부 ${r.sync.rejected}` : "")
+        : "Web API 미설정",
       r.sync.ok === false ? "bad" : "");
   }
   resultEl.append(dl);

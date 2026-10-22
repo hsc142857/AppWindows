@@ -89,7 +89,9 @@ loaders.overview = async () => {
   $("ov-unsynced").textContent = o.unsynced;
   $("ov-last").textContent = fmtTime(o.lastCapture);
   $("ov-interval").textContent = `${fmtSeconds(o.settings.intervalSeconds)} (로딩 후 ${o.settings.loadDelaySeconds}초 대기)`;
-  $("ov-pg").textContent = o.postgres;
+  $("ov-api").textContent = o.api;
+  $("ov-rejected").hidden = !o.rejected;
+  $("ov-rejected-text").textContent = `서버가 거부한 스냅샷 ${o.rejected}개는 업로드에서 빠져 있습니다. (사유는 스냅샷 탭)`;
   $("ov-host").textContent = o.hostInstalled ? `등록됨 (${o.hostDetail})` : `등록 안 됨 — 설정 탭에서 등록하세요 (${o.hostDetail})`;
   $("ov-home").textContent = o.home;
   const login = $("ov-login");
@@ -105,11 +107,18 @@ loaders.overview = async () => {
 };
 
 $("ov-refresh").addEventListener("click", () => loaders.overview());
+$("ov-retry").addEventListener("click", async () => {
+  const n = await call(api.RetryRejected);
+  toast(`거부된 ${n}개를 다음 동기화 때 다시 보냅니다.`);
+  loaders.overview();
+});
 $("ov-sync").addEventListener("click", async (e) => {
   e.target.disabled = true;
   try {
     const r = await call(api.SyncNow);
-    toast(r.postgresConfigured ? `동기화 완료: 보냄 ${r.sent}개, 남음 ${r.remaining}개` : "Postgres가 설정되지 않았습니다.");
+    toast(r.apiConfigured
+      ? `동기화 완료: 보냄 ${r.sent}개, 남음 ${r.remaining}개` + (r.rejected ? `, 서버 거부 ${r.rejected}개` : "")
+      : "Web API가 설정되지 않았습니다. 설정 탭에서 입력하세요.");
   } finally {
     e.target.disabled = false;
     loaders.overview();
@@ -189,7 +198,7 @@ loaders.snapshots = async () => {
       el("td", {}, s.title || s.targetName || s.targetURL),
       el("td", { class: "nowrap", title: fmtTime(s.capturedAt) }, fmtShort(s.capturedAt)),
       el("td", { class: "nowrap", title: fmtTime(s.lastSeenAt) }, fmtShort(s.lastSeenAt)),
-      el("td", { class: "nowrap" }, s.syncedAt ? "완료" : "대기"),
+      el("td", { class: "nowrap" + (s.syncError ? " status-error" : "") }, s.syncedAt ? "완료" : s.syncError ? "거부" : "대기"),
     );
     if (s.id === selectedSnap) tr.classList.add("selected");
     body.append(tr);
@@ -208,6 +217,7 @@ async function showSnapshot(id, tr) {
   row("수집", fmtTime(s.capturedAt));
   row("마지막 확인", fmtTime(s.lastSeenAt));
   row("동기화", fmtTime(s.syncedAt));
+  if (s.syncError) row("서버 거부", s.syncError);
   row("UID", s.uid);
   if (s.status === "ok") row("HTML", `${s.htmlSize.toLocaleString()}바이트`);
   if (s.error) row("오류", s.error);
@@ -225,12 +235,13 @@ loaders.settings = async () => {
   const o = await call(api.Overview);
   $("set-interval").value = o.settings.intervalSeconds;
   $("set-delay").value = o.settings.loadDelaySeconds;
-  const pg = await call(api.PGShow);
-  $("pg-url").value = pg.maskedURL || "";
-  $("pg-table").value = pg.table || "";
+  const v = await call(api.APIShow);
+  $("api-url").value = v.baseURL || "";
+  $("api-token").value = "";
+  $("api-token").placeholder = v.configured ? `저장된 토큰 ${v.maskedToken} (바꿀 때만 입력)` : "Bearer 토큰";
   $("host-detail").textContent = o.hostInstalled
     ? `등록됨: ${o.hostDetail} · 확장 ID ${o.extensionID}`
-    : `등록 안 됨 (${o.hostDetail}). PageVault.exe와 같은 폴더의 pagevault.exe를 등록합니다.`;
+    : `등록 안 됨 (${o.hostDetail}). PageVault.exe와 같은 폴더의 pagevault-cli.exe를 등록합니다.`;
 };
 
 $("settings-form").addEventListener("submit", async (e) => {
@@ -239,28 +250,27 @@ $("settings-form").addEventListener("submit", async (e) => {
   toast("저장했습니다. 확장은 다음 라운드부터 새 주기를 적용합니다.");
 });
 
-$("pg-form").addEventListener("submit", async (e) => {
+$("api-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const v = await call(api.PGSave, $("pg-url").value, $("pg-table").value);
-  $("pg-url").value = v.maskedURL;
-  $("pg-table").value = v.table;
-  toast("Postgres 설정을 저장했습니다.");
+  await call(api.APISave, $("api-url").value, $("api-token").value);
+  loaders.settings();
+  toast("Web API 설정을 저장했습니다.");
 });
 
-$("pg-test").addEventListener("click", async (e) => {
+$("api-test").addEventListener("click", async (e) => {
   e.target.disabled = true;
   try {
-    toast(await call(api.PGTest, $("pg-url").value, $("pg-table").value));
+    toast(await call(api.APITest, $("api-url").value, $("api-token").value));
   } finally {
     e.target.disabled = false;
   }
 });
 
-$("pg-clear").addEventListener("click", async () => {
-  if (!confirm("Postgres 설정을 삭제할까요? (로컬 스냅샷은 그대로 남습니다)")) return;
-  await call(api.PGClear);
+$("api-clear").addEventListener("click", async () => {
+  if (!confirm("Web API 설정을 삭제할까요? (로컬 스냅샷은 그대로 남습니다)")) return;
+  await call(api.APIClear);
   loaders.settings();
-  toast("Postgres 설정을 삭제했습니다.");
+  toast("Web API 설정을 삭제했습니다.");
 });
 
 $("host-install").addEventListener("click", async () => {

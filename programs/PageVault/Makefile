@@ -1,12 +1,8 @@
-.PHONY: test test-pg vet cli app build icons
+.PHONY: test vet cli app build icons
 
 # 코어 단위 테스트 (Mac에서도 실행)
 test:
 	go test ./core/ ./cmd/...
-
-# 실제 Postgres로 동기화 테스트: make test-pg PG=postgres://user:pass@host:5432/db?sslmode=disable
-test-pg:
-	PAGEVAULT_TEST_PG='$(PG)' go test -count=1 -run TestSyncIntegration -v ./core/
 
 # Mac·Windows 양쪽 빌드 태그로 정적 검사
 vet:
@@ -15,11 +11,12 @@ vet:
 
 # 개발용: 현재 OS용 CLI
 cli:
-	go build -o dist/pagevault ./cmd/pagevault
+	go build -o dist/pagevault-cli ./cmd/pagevault
 
 # 개발용: 현재 OS용 트레이·관리 창 (Mac에서 화면 확인용)
+# Mac은 Wails CLI가 붙여 주던 UniformTypeIdentifiers 프레임워크를 직접 링크해야 한다.
 app:
-	go build -tags desktop,production -o dist/PageVault ./app
+	CGO_LDFLAGS="-framework UniformTypeIdentifiers" go build -tags desktop,production -o dist/PageVault ./app
 
 # Windows 배포본 (dist/PageVault-windows-amd64.zip)
 build:

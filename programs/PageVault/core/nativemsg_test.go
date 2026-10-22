@@ -108,7 +108,7 @@ func TestHostServe(t *testing.T) {
 	h := &Host{Store: st, Sync: func(ctx context.Context, s *Store) (SyncResult, error) {
 		syncCalled = true
 		n, _ := s.UnsyncedCount()
-		return SyncResult{PostgresConfigured: false, Remaining: n}, nil
+		return SyncResult{APIConfigured: false, Remaining: n}, nil
 	}}
 	if err := h.Serve(&in, &out); err != nil {
 		t.Fatal(err)
@@ -152,7 +152,7 @@ func TestHostSyncFailureKeepsData(t *testing.T) {
 	in.Write(frame(t, map[string]any{"id": "s", "type": "sync"}))
 	h := &Host{Store: st, Sync: func(ctx context.Context, s *Store) (SyncResult, error) {
 		n, _ := s.UnsyncedCount()
-		return SyncResult{PostgresConfigured: true, Remaining: n}, errors.New("connection refused")
+		return SyncResult{APIConfigured: true, Remaining: n}, errors.New("connection refused")
 	}}
 	if err := h.Serve(&in, &out); err != nil {
 		t.Fatal(err)

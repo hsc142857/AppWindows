@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"appwindows/shared/apiclient"
 	"github.com/google/uuid"
 	_ "modernc.org/sqlite"
 )
@@ -43,7 +44,8 @@ CREATE TABLE IF NOT EXISTS snapshots (
 	error        TEXT NOT NULL DEFAULT '',
 	captured_at  TEXT NOT NULL,
 	last_seen_at TEXT NOT NULL,
-	synced_at    TEXT
+	synced_at    TEXT,
+	sync_error   TEXT
 );
 CREATE INDEX IF NOT EXISTS snapshots_target_url_id ON snapshots(target_url, id);
 CREATE INDEX IF NOT EXISTS snapshots_unsynced ON snapshots(id) WHERE synced_at IS NULL;
@@ -74,7 +76,26 @@ func OpenStoreAt(path string) (*Store, error) {
 		db.Close()
 		return nil, errorf("SQLite 스키마 생성 실패: %w", err)
 	}
+	if err := migrate(db); err != nil {
+		db.Close()
+		return nil, errorf("SQLite 스키마 갱신 실패: %w", err)
+	}
 	return &Store{db: db, now: time.Now}, nil
+}
+
+// migrate는 이전 버전 DB에 없는 컬럼을 추가한다.
+func migrate(db *sql.DB) error {
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('snapshots') WHERE name = 'sync_error'`).Scan(&n); err != nil {
+		return err
+	}
+	if n == 0 {
+		// Web API 전환 전 DB: 거부 사유 컬럼 추가
+		if _, err := db.Exec(`ALTER TABLE snapshots ADD COLUMN sync_error TEXT`); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // filepath2URI는 Windows 경로(C:\...)를 SQLite URI 경로로 바꾼다.
@@ -345,13 +366,13 @@ func (s *Store) SaveCapture(c Capture) (SaveResult, error) {
 }
 
 const snapshotCols = `id, uid, target_id, target_url, target_name, final_url, title,
-	COALESCE(text, ''), COALESCE(html, ''), content_hash, status, error, captured_at, last_seen_at, COALESCE(synced_at, '')`
+	COALESCE(text, ''), COALESCE(html, ''), content_hash, status, error, captured_at, last_seen_at, COALESCE(synced_at, ''), COALESCE(sync_error, '')`
 
 func scanSnapshot(sc interface{ Scan(...any) error }) (Snapshot, error) {
 	var sn Snapshot
 	var tid sql.NullInt64
 	err := sc.Scan(&sn.ID, &sn.UID, &tid, &sn.TargetURL, &sn.TargetName, &sn.FinalURL, &sn.Title,
-		&sn.Text, &sn.HTML, &sn.ContentHash, &sn.Status, &sn.Error, &sn.CapturedAt, &sn.LastSeenAt, &sn.SyncedAt)
+		&sn.Text, &sn.HTML, &sn.ContentHash, &sn.Status, &sn.Error, &sn.CapturedAt, &sn.LastSeenAt, &sn.SyncedAt, &sn.SyncError)
 	if tid.Valid {
 		sn.TargetID = &tid.Int64
 	}
@@ -396,10 +417,10 @@ func (s *Store) Snapshot(id int64) (Snapshot, error) {
 	return sn, err
 }
 
-// UnsyncedAfter는 id가 afterID보다 큰 미동기화 스냅샷을 limit개까지 돌려준다.
+// UnsyncedAfter는 id가 afterID보다 큰 미동기화 스냅샷을 limit개까지 돌려준다 (서버가 거부한 행 제외).
 func (s *Store) UnsyncedAfter(afterID int64, limit int) ([]Snapshot, error) {
 	rows, err := s.db.Query(`SELECT `+snapshotCols+` FROM snapshots
-		WHERE synced_at IS NULL AND id > ? ORDER BY id LIMIT ?`, afterID, limit)
+		WHERE synced_at IS NULL AND sync_error IS NULL AND id > ? ORDER BY id LIMIT ?`, afterID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -433,9 +454,48 @@ func (s *Store) MarkSynced(sent []Snapshot) error {
 	return tx.Commit()
 }
 
+// MarkRejected는 서버가 거부한 행에 사유를 남긴다. 다시 보내도 같은 결과이므로 업로드에서 뺀다.
+func (s *Store) MarkRejected(rejected []apiclient.Rejected) error {
+	if len(rejected) == 0 {
+		return nil
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, r := range rejected {
+		msg := r.Error
+		if msg == "" {
+			msg = "서버가 거부함"
+		}
+		if _, err := tx.Exec(`UPDATE snapshots SET sync_error = ? WHERE uid = ? AND synced_at IS NULL`, msg, r.UID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// ClearRejected는 거부 표시를 지워 다음 업로드에 다시 넣는다 (서버 쪽을 고친 뒤 쓴다).
+func (s *Store) ClearRejected() (int, error) {
+	res, err := s.db.Exec(`UPDATE snapshots SET sync_error = NULL WHERE sync_error IS NOT NULL`)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return int(n), nil
+}
+
+// UnsyncedCount는 업로드할 건수다 (거부된 행 제외).
 func (s *Store) UnsyncedCount() (int, error) {
 	var n int
-	err := s.db.QueryRow(`SELECT COUNT(*) FROM snapshots WHERE synced_at IS NULL`).Scan(&n)
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM snapshots WHERE synced_at IS NULL AND sync_error IS NULL`).Scan(&n)
+	return n, err
+}
+
+func (s *Store) RejectedCount() (int, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM snapshots WHERE sync_error IS NOT NULL AND synced_at IS NULL`).Scan(&n)
 	return n, err
 }
 
@@ -453,6 +513,9 @@ func (s *Store) Status() (Status, error) {
 		return st, err
 	}
 	if st.Unsynced, err = s.UnsyncedCount(); err != nil {
+		return st, err
+	}
+	if st.Rejected, err = s.RejectedCount(); err != nil {
 		return st, err
 	}
 	states, err := s.TargetStates()

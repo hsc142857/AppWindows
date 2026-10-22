@@ -51,6 +51,7 @@ type Snapshot struct {
 	CapturedAt  string `json:"capturedAt"`
 	LastSeenAt  string `json:"lastSeenAt"`
 	SyncedAt    string `json:"syncedAt"`
+	SyncError   string `json:"syncError"` // 서버가 거부한 사유 (있으면 재전송하지 않음)
 }
 
 type Settings struct {
@@ -72,9 +73,10 @@ type Status struct {
 	EnabledCount  int           `json:"enabled"`
 	Snapshots     int           `json:"snapshots"`
 	Unsynced      int           `json:"unsynced"`
+	Rejected      int           `json:"rejected"` // 서버가 거부해 업로드에서 빠진 건수
 	LastCapture   string        `json:"lastCapture"`
 	Settings      Settings      `json:"settings"`
-	Postgres      string        `json:"postgres"`
+	API           string        `json:"api"`
 	LoginRequired []TargetState `json:"loginRequired"`
 }
 

@@ -1,4 +1,4 @@
-// Package core는 PageVault의 저장소, 로그인 감지, Native Messaging, Postgres 동기화를 담는다.
+// Package core는 PageVault의 저장소, 로그인 감지, Native Messaging, Web API 업로드를 담는다.
 // CLI(cmd/pagevault)와 트레이 앱(app)이 함께 쓴다.
 package core
 
@@ -28,10 +28,13 @@ func Home() string {
 	return filepath.Join(os.TempDir(), "PageVault")
 }
 
-func DBPath() string       { return filepath.Join(Home(), "pagevault.sqlite") }
-func PostgresPath() string { return filepath.Join(Home(), "postgres.json") }
-func LogPath() string      { return filepath.Join(Home(), "host.log") }
-func BinDir() string       { return filepath.Join(Home(), "bin") }
+func DBPath() string        { return filepath.Join(Home(), "pagevault.sqlite") }
+func APIConfigPath() string { return filepath.Join(Home(), "api.json") }
+func LogPath() string       { return filepath.Join(Home(), "host.log") }
+func BinDir() string        { return filepath.Join(Home(), "bin") }
+
+// legacyPostgresPath는 Web API로 바꾸기 전 Postgres 설정 파일이다 (안내용).
+func legacyPostgresPath() string { return filepath.Join(Home(), "postgres.json") }
 
 // EnsureHome은 데이터 폴더를 만든다 (사용자만 접근).
 func EnsureHome() error {

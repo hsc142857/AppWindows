@@ -2,13 +2,17 @@ module pagevault
 
 go 1.27.2
 
+// 저장소 밖에서(go.work 없이) 빌드해도 공통 모듈을 찾도록 상대 경로로 연결한다.
+replace appwindows/shared => ../../shared
+
 require (
+	appwindows/shared v0.0.0
 	fyne.io/systray v1.12.2
 	github.com/gen2brain/beeep v0.11.2
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.11.0
 	github.com/wailsapp/wails/v2 v2.17.0
 	golang.org/x/sys v0.49.0
+	golang.org/x/term v0.47.0
 	modernc.org/sqlite v1.60.1
 )
 
@@ -22,8 +26,6 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackmordaunt/icns/v3 v3.0.1 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
 	github.com/labstack/echo/v4 v4.15.3 // indirect

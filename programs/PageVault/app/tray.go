@@ -55,8 +55,8 @@ func (t *tray) onReady() {
 	t.mLogin = systray.AddMenuItem("", "로그인이 만료된 대상이 있습니다. Chrome에서 다시 로그인하세요.")
 	t.mLogin.Hide()
 	systray.AddSeparator()
-	t.mOpen = systray.AddMenuItem("관리 창 열기", "대상 URL, 수집 주기, Postgres 설정")
-	t.mSync = systray.AddMenuItem("지금 동기화", "미동기화 스냅샷을 Postgres로 보냅니다")
+	t.mOpen = systray.AddMenuItem("관리 창 열기", "대상 URL, 수집 주기, Web API 설정")
+	t.mSync = systray.AddMenuItem("지금 동기화", "미동기화 스냅샷을 Web API로 올립니다")
 	systray.AddSeparator()
 	t.mQuit = systray.AddMenuItem("종료", "트레이 앱을 종료합니다 (수집은 Chrome 확장이 계속합니다)")
 	systray.SetOnTapped(openWindow)
@@ -171,10 +171,14 @@ func (t *tray) syncNow() {
 	switch {
 	case err != nil:
 		_ = beeep.Notify("PageVault: 동기화 실패", err.Error(), iconPNG)
-	case !res.PostgresConfigured:
-		_ = beeep.Notify("PageVault", "Postgres가 설정되지 않았습니다. 관리 창에서 설정하세요.", iconPNG)
+	case !res.APIConfigured:
+		_ = beeep.Notify("PageVault", "Web API가 설정되지 않았습니다. 관리 창에서 설정하세요.", iconPNG)
 	default:
-		_ = beeep.Notify("PageVault: 동기화 완료", fmt.Sprintf("보냄 %d개, 남음 %d개", res.Sent, res.Remaining), iconPNG)
+		msg := fmt.Sprintf("보냄 %d개, 남음 %d개", res.Sent, res.Remaining)
+		if res.Rejected > 0 {
+			msg += fmt.Sprintf(", 서버 거부 %d개", res.Rejected)
+		}
+		_ = beeep.Notify("PageVault: 동기화 완료", msg, iconPNG)
 	}
 	t.refresh()
 }
