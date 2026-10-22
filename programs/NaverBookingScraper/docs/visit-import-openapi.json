@@ -1,0 +1,449 @@
+{
+  "components": {
+    "schemas": {
+      "ImportItem": {
+        "properties": {
+          "action": {
+            "default": "upsert",
+            "enum": [
+              "upsert",
+              "cancel"
+            ],
+            "type": "string"
+          },
+          "brand": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "externalBookingId": {
+            "description": "네이버 예약번호 등 (파트너 범위 멱등 키)",
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "mileage": {
+            "maximum": 9999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "model": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "phone": {
+            "description": "한국 휴대폰 01… (upsert 시 필수)",
+            "maxLength": 20,
+            "type": "string"
+          },
+          "plateNo": {
+            "description": "없으면 서버가 NAVERIMPORT 플레이스홀더",
+            "maxLength": 20,
+            "type": "string"
+          },
+          "requestNote": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "scheduledAt": {
+            "description": "ISO-8601. upsert 시 필수. 예: 2026-10-20T14:00:00+09:00",
+            "type": "string"
+          },
+          "statusHint": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "year": {
+            "maximum": 2100,
+            "minimum": 1980,
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "externalBookingId"
+        ],
+        "type": "object"
+      },
+      "ImportItemResult": {
+        "properties": {
+          "error": {
+            "description": "result=error 일 때만",
+            "type": "string"
+          },
+          "externalBookingId": {
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "created",
+              "updated",
+              "skipped",
+              "cancelled",
+              "error"
+            ],
+            "type": "string"
+          },
+          "scheduledAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "description": "성공 시 방문 상태(가능하면)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "externalBookingId",
+          "result"
+        ],
+        "type": "object"
+      },
+      "ImportRequest": {
+        "properties": {
+          "dryRun": {
+            "default": false,
+            "description": "true면 DB 쓰지 않고 검증·예상 결과만 반환",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ImportItem"
+            },
+            "maxItems": 200,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ImportResult": {
+        "properties": {
+          "cancelled": {
+            "type": "integer"
+          },
+          "created": {
+            "type": "integer"
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "errors": {
+            "description": "results 중 error만 (하위 호환)",
+            "items": {
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "externalBookingId": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ImportItemResult"
+            },
+            "type": "array"
+          },
+          "skipped": {
+            "type": "integer"
+          },
+          "updated": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ListResult": {
+        "properties": {
+          "date": {
+            "example": "2026-10-20",
+            "type": "string"
+          },
+          "partnerId": {
+            "type": "string"
+          },
+          "partnerName": {
+            "type": "string"
+          },
+          "visits": {
+            "items": {
+              "$ref": "#/components/schemas/ListVisitItem"
+            },
+            "maxItems": 500,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ListVisitItem": {
+        "properties": {
+          "brand": {
+            "type": "string"
+          },
+          "externalBookingId": {
+            "type": "string"
+          },
+          "mileage": {
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "plateNo": {
+            "type": "string"
+          },
+          "requestNote": {
+            "type": "string"
+          },
+          "scheduledAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "source": {
+            "example": "naver_import",
+            "type": "string"
+          },
+          "status": {
+            "description": "reserved · cancelled · waiting · done 등",
+            "type": "string"
+          },
+          "year": {
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "OneResult": {
+        "properties": {
+          "partnerId": {
+            "type": "string"
+          },
+          "partnerName": {
+            "type": "string"
+          },
+          "visit": {
+            "$ref": "#/components/schemas/ListVisitItem"
+          }
+        },
+        "type": "object"
+      },
+      "PingResult": {
+        "properties": {
+          "allowedPaths": {
+            "example": [
+              "/api/visit/import-external"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "example": true,
+            "type": "boolean"
+          },
+          "partnerId": {
+            "type": "string"
+          },
+          "partnerName": {
+            "type": "string"
+          },
+          "scopes": {
+            "example": [
+              "visit.import"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "VisitImportBearer": {
+        "bearerFormat": "msvi_",
+        "description": "탑바 «인증키»에서 발급한 `msvi_…` 키",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "외부 GUI·Chrome 확장프로그램용 방문(예약) 가져오기 API.\n\n인증: `Authorization: Bearer msvi_…` (탑바에서 발급).\n\n스코프: visit.import.\n\n허용 경로: /api/visit/import-external 만.\n\nGET(무쿼리)=핑 · GET(?date)=지정일 목록(+partnerName) · GET(?externalBookingId)=단건 · POST=등록/취소(dryRun·건별 results).\n\n업체명(partnerName)은 GET 목록/핑/단건에만. dryRun·POST에는 두지 않음.\n\nThis is not a Naver webhook integration.",
+    "title": "Motospec Visit Import API",
+    "version": "1.3.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/visit/import-external": {
+      "get": {
+        "description": "쿼리 없음 → 키·파트너 연결 테스트. `date`(YYYY-MM-DD, 서울) → 해당일 목록. `externalBookingId` → 단건. `date`와 동시 사용 불가. 목록 최대 500건.",
+        "operationId": "pingListOrGetVisitImport",
+        "parameters": [
+          {
+            "description": "목록 지정일 (서울 달력 하루)",
+            "in": "query",
+            "name": "date",
+            "required": false,
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "단건 조회 (예약번호)",
+            "in": "query",
+            "name": "externalBookingId",
+            "required": false,
+            "schema": {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/PingResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ListResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OneResult"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "핑 · 목록 · 단건"
+          },
+          "400": {
+            "description": "validation · invalid_date"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "example": "unauthorized",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "단건 not_found"
+          }
+        },
+        "security": [
+          {
+            "VisitImportBearer": []
+          }
+        ],
+        "summary": "연결 테스트 · 지정일 목록 · 단건 조회",
+        "tags": [
+          "visit-import"
+        ]
+      },
+      "post": {
+        "description": "`dryRun: true`면 DB에 쓰지 않고 건별 예상 결과만 반환. 업체명(`partnerName`)은 GET 목록 등에서 받는다.",
+        "operationId": "importExternalVisits",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "dryRun": false,
+                "items": [
+                  {
+                    "action": "upsert",
+                    "externalBookingId": "1234567890",
+                    "name": "홍길동",
+                    "phone": "01012345678",
+                    "requestNote": "서비스:점검",
+                    "scheduledAt": "2026-10-20T14:00:00+09:00"
+                  },
+                  {
+                    "action": "cancel",
+                    "externalBookingId": "1234567891"
+                  }
+                ]
+              },
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "처리 결과 (건별 results)"
+          },
+          "400": {
+            "description": "validation"
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "VisitImportBearer": []
+          }
+        ],
+        "summary": "예약 일괄 등록 / 취소 (dryRun 가능)",
+        "tags": [
+          "visit-import"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "current",
+      "url": "http://localhost:3000"
+    }
+  ],
+  "tags": [
+    {
+      "description": "방문 일정 외부 가져오기",
+      "name": "visit-import"
+    }
+  ]
+}

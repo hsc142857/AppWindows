@@ -1,0 +1,41 @@
+네이버예약 스크랩 (NaverBookingScraper) 사용법 — Windows
+=========================================================
+
+네이버 예약을 Motospec 서버(Visit Import API)로 보내고, 전송 결과를 보여 주는 프로그램입니다.
+화면에 "전송 완료"로 보이는 예약은 서버에 반영된 것이고, 안 간 예약은 "미전송"에 따로 나옵니다.
+
+1. 실행
+   - 이 폴더를 원하는 위치에 둡니다 (예: C:\Tools\NaverBookingScraper).
+   - NaverBookingScraper.exe를 더블클릭합니다.
+   - "Windows의 PC 보호" 창이 뜨면 [추가 정보] → [실행]을 누릅니다 (서명되지 않은 프로그램이라 뜨는 안내).
+   - Windows 10에서 WebView2가 없으면 설치 안내가 뜹니다. 설치 후 다시 실행하세요
+     (Windows 11은 기본 설치되어 있습니다).
+
+2. 인증키 (처음 한 번만)
+   - Motospec 탑바 «인증키»에서 발급한 msvi_… 키를 입력하고 [확인하고 저장]을 누릅니다.
+   - 서버 주소: 운영 서버 주소를 넣습니다. 개발 중이면 Mac 개발 서버 주소 http://<Mac IP>:3000
+     (Windows의 localhost는 이 PC 자신입니다).
+   - 키를 확인한 뒤 저장하고, 화면 위에 키를 발급한 업체명이 나옵니다. 다음부터는 묻지 않습니다.
+   - 키는 이 PC의 Windows 계정으로 암호화해 저장합니다 (다른 사용자는 읽을 수 없음).
+
+3. 화면
+   - 전송 현황: 전송 완료 / 미전송 (대기 · 전송 실패 · 거부 · 다른 업체)
+       전송 실패는 1분마다 자동으로 다시 보냅니다.
+       거부는 [거부 건 다시 전송]을 누를 때만 다시 보냅니다.
+   - 서버 예약: 서버에 저장된 날짜별 예약
+   - 예약 찾기: 예약번호로 서버의 예약 한 건 조회
+   - 가져오기: 예약 JSON 파일을 긁어 온 데이터 대신 가져옵니다 (Chrome 확장 수집 전 테스트용).
+       [미리보기]는 서버에 쓰지 않고 결과만 보여 줍니다.
+       [가져와서 전송]은 서버에 실제로 등록합니다. 시험은 sample-reservations.json으로 하세요.
+   - 설정: 서버 주소·인증키 변경, 인증키 삭제
+
+4. CLI (명령 프롬프트·PowerShell)
+   naverbookingscraper-cli.exe status
+   naverbookingscraper-cli.exe visits 2026-10-20
+   naverbookingscraper-cli.exe import sample-reservations.json --dry-run
+   GUI와 같은 인증키·데이터를 씁니다.
+
+알아 둘 점
+   - 데이터 위치: %LOCALAPPDATA%\NaverBookingScraper
+       api.json (서버 주소·암호화된 인증키), partner.json (업체), naverbookingscraper.sqlite (예약·전송 현황)
+   - 처음부터 다시: [설정] → [인증키 삭제] 또는 위 폴더 삭제

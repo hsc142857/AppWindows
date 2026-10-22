@@ -1,0 +1,10 @@
+[
+  {"bookingID": "1234567890", "status": "확정", "startAt": "2026-10-20T14:00:00+09:00", "itemName": "점검",
+   "customer": "홍길동", "phone": "010-1234-5678", "request": "", "year": 0, "mileage": -1},
+  {"bookingID": "SAMPLE-NEW-1", "status": "확정", "startAt": "2026-10-21T10:30:00+09:00", "itemName": "엔진오일 교체",
+   "customer": "김철수", "phone": "+82 10-9876-5432", "request": "오후 픽업",
+   "plateNo": "서울12가3456", "brand": "Honda", "model": "PCX125", "year": 2022, "mileage": 15000},
+  {"bookingID": "SAMPLE-CANCEL-1", "status": "예약자 취소"},
+  {"bookingID": "SAMPLE-BAD-1", "status": "확정", "startAt": "2026-10-21T11:00:00+09:00",
+   "customer": "이영희", "phone": "02-123-4567", "year": 0, "mileage": -1}
+]

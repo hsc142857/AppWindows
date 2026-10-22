@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NaverBookingScraper</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 처음 실행: 인증키 설정 -->
+  <section id="setup" class="setup" hidden>
+    <div class="setup-card">
+      <h1>네이버예약 스크랩</h1>
+      <p class="muted">Motospec 탑바 «인증키»에서 발급한 키를 <b>한 번만</b> 입력하면 됩니다.<br>
+        키를 확인해 어느 업체의 키인지 보여 드립니다.</p>
+      <form id="setup-form">
+        <label>서버 주소<input id="setup-url" type="text" autocomplete="off" spellcheck="false"></label>
+        <label>인증키<input id="setup-key" type="password" placeholder="msvi_…" autocomplete="off" spellcheck="false"></label>
+        <p class="muted small" id="setup-hint"></p>
+        <div class="actions">
+          <button class="primary" id="setup-save">확인하고 저장</button>
+          <button type="button" id="setup-cancel" hidden>취소</button>
+        </div>
+        <p class="error" id="setup-error" hidden></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- 메인 -->
+  <div id="main" class="main" hidden>
+    <header>
+      <div class="brand">
+        <h1>네이버예약 스크랩</h1>
+        <span class="partner" id="partner" title="인증키를 발급한 업체">업체 확인 중…</span>
+      </div>
+      <nav>
+        <button data-tab="records" class="active">전송 현황</button>
+        <button data-tab="visits">서버 예약</button>
+        <button data-tab="find">예약 찾기</button>
+        <button data-tab="upload">가져오기</button>
+        <button data-tab="settings">설정</button>
+      </nav>
+    </header>
+    <div id="banner" class="banner" hidden></div>
+
+    <main>
+      <section id="tab-records" class="tab active">
+        <div class="row">
+          <div class="summary" id="rec-summary"></div>
+          <span class="spacer"></span>
+          <button id="rec-send" class="primary">지금 전송</button>
+          <button id="rec-retry" hidden>거부 건 다시 전송</button>
+        </div>
+        <p class="muted small" id="rec-note"></p>
+
+        <div id="rec-unsent-box" class="unsent-box" hidden>
+          <h2>미전송 <span id="rec-unsent-count"></span></h2>
+          <p class="muted small">아직 서버에 반영되지 않은 예약입니다. <b>전송 실패</b>는 자동으로 다시 보내고,
+            <b>거부</b>는 내용이 바뀌거나 "거부 건 다시 전송"을 누를 때까지 보내지 않습니다.</p>
+          <table>
+            <thead><tr><th>상태</th><th>이용 일시</th><th>예약번호</th><th>이름</th><th>서비스</th><th>사유</th><th>마지막 시도</th></tr></thead>
+            <tbody id="rec-unsent"></tbody>
+          </table>
+        </div>
+
+        <h2>전송 완료 <span id="rec-sent-count"></span></h2>
+        <p class="muted small">서버가 처리했다고 응답한 예약만 보입니다 (여기에 있으면 서버에 반영된 것).</p>
+        <table>
+          <thead><tr><th>이용 일시</th><th>예약번호</th><th>이름</th><th>서비스</th><th>네이버 상태</th><th>서버 처리</th><th>전송 시각</th></tr></thead>
+          <tbody id="rec-sent"></tbody>
+        </table>
+      </section>
+
+      <section id="tab-visits" class="tab">
+        <div class="row">
+          <button id="day-prev" title="전날">◀</button>
+          <input id="day" type="date">
+          <button id="day-next" title="다음날">▶</button>
+          <button id="day-today">오늘</button>
+          <button id="day-refresh">새로고침</button>
+          <span class="muted" id="day-count"></span>
+        </div>
+        <table>
+          <thead><tr><th>시각</th><th>상태</th><th>이름</th><th>전화</th><th>차량</th><th>요청</th><th>예약번호</th></tr></thead>
+          <tbody id="day-body"></tbody>
+        </table>
+      </section>
+
+      <section id="tab-find" class="tab">
+        <form id="find-form" class="row">
+          <input id="find-id" type="text" placeholder="네이버 예약번호" spellcheck="false" required>
+          <button class="primary">찾기</button>
+        </form>
+        <div id="find-result"></div>
+      </section>
+
+      <section id="tab-upload" class="tab">
+        <p class="muted">Chrome 확장 수집이 붙기 전까지, 예약 JSON 파일(<code>Reservation</code> 배열)을 <b>긁어 온 데이터 대신</b> 가져옵니다.
+          <b>가져와서 전송</b>하면 이 PC에 저장한 뒤 바로 서버로 보내고, 결과는 <b>전송 현황</b>에 나옵니다.
+          <b>미리보기</b>는 저장·전송 없이 서버의 예상 결과만 봅니다.</p>
+        <div class="row">
+          <button id="up-pick">파일 선택…</button>
+          <span id="up-file" class="muted">선택한 파일 없음</span>
+        </div>
+        <div class="row">
+          <button id="up-dry" disabled>미리보기 (서버에 쓰지 않음)</button>
+          <button id="up-real" class="primary" disabled>가져와서 전송</button>
+        </div>
+        <div id="up-result"></div>
+      </section>
+
+      <section id="tab-settings" class="tab">
+        <dl class="info">
+          <dt>업체</dt><dd id="set-partner">-</dd>
+          <dt>서버 주소</dt><dd id="set-url">-</dd>
+          <dt>인증키</dt><dd id="set-key">-</dd>
+          <dt>키 보관</dt><dd id="set-enc">-</dd>
+          <dt>데이터 위치</dt><dd id="set-home">-</dd>
+          <dt>버전</dt><dd id="set-version">-</dd>
+        </dl>
+        <div class="actions">
+          <button id="set-change" class="primary">인증키·주소 변경</button>
+          <button id="set-check">연결 다시 확인</button>
+          <button id="set-clear" class="danger">인증키 삭제</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

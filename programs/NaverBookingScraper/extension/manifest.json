@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "NaverBookingScraper",
+  "version": "0.1.0",
+  "description": "네이버 예약 파트너센터의 예약 목록을 주기적으로 읽어 NaverBookingScraper로 보냅니다.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA40auPthnJ+IEelEys3FZBbQ5oyhlICK66zskrbfv8F2P8Bt6oE+eCCG+u6qdiOQoDo+PrM/AhTgJrTEO4aIsETSns+ju05AYsSjwVX2w1hOaDA1ekv5w/42+slwZIZgHpz9TZVTy93Y9bQbKU5xo4iCA2/DP8G6SYkbAjwrMpPMoeL0Ct03nkrvJoy140erLIpb4CX4KjJe+RE5hy/g5DtGxqLAQP5bE0YV+vHsf4Jx0JDb0SdCRE3mP7M24tDhiVnCRwZ5m6a356yO/ExSSeD4pTOjYAc/QOcUyF0PRg6AL07ci+ZYrGwRPZGNX8an/CS1r5JeOv/ZKclmO4MHM7wIDAQAB",
+  "minimum_chrome_version": "120",
+  "permissions": [
+    "alarms",
+    "tabs",
+    "scripting",
+    "nativeMessaging",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://partner.booking.naver.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "NaverBookingScraper",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
