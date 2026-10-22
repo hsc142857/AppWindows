@@ -1,0 +1,35 @@
+{
+  "name": "example-pay",
+  "title": "예시 페이 (선택자를 실제 사이트에 맞게 고치세요)",
+  "login": {
+    "url": "https://partner.example.com/login",
+    "username": "#loginId",
+    "password": "#loginPw",
+    "submit": "button[type=submit]",
+    "success": "",
+    "error": ".error-message"
+  },
+  "pages": [
+    {
+      "name": "정산내역",
+      "url": "https://partner.example.com/settlements?period=1m",
+      "rows": "table.settlement-list tbody tr",
+      "next": "button.pagination-next",
+      "maxPages": 20
+    },
+    {
+      "name": "머니내역",
+      "url": "https://partner.example.com/money/history",
+      "waitFor": "ul.history",
+      "rows": "ul.history > li",
+      "columns": {
+        "일시": ".date",
+        "구분": ".type",
+        "금액": ".amount",
+        "잔액": ".balance"
+      },
+      "next": "a.more",
+      "maxPages": 10
+    }
+  ]
+}

@@ -3,3 +3,6 @@ programs/*/dist/
 **/*.syso
 **/.pagevault-dev/
 go.work.sum
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
